@@ -11,6 +11,7 @@
 
 namespace App\Http\Controllers\Frontend;
 
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use App\Businesses\BusinessState;
 use App\Constant\FrontendConstant;
@@ -62,6 +63,7 @@ class OrderController extends Controller
         $needPaidTotal = $this->businessState->calculateOrderNeedPaidSum($order);
 
         $scene = is_h5() ? FrontendConstant::PAYMENT_SCENE_H5 : FrontendConstant::PAYMENT_SCENE_PC;
+        Log::info("当前系统的环境：".$scene);
         $payments = get_payments($scene);
 
         return v('frontend.order.show', compact('order', 'payments', 'needPaidTotal'));
@@ -79,8 +81,11 @@ class OrderController extends Controller
         $order = $this->orderService->findUserNoPaid($orderId);
 
         $scene = is_h5() ? FrontendConstant::PAYMENT_SCENE_H5 : FrontendConstant::PAYMENT_SCENE_PC;
+        Log::info($scene);
         $payments = get_payments($scene);
+        Log::info($payments);
         $payment = $order['payment'] ?: $request->post('payment');
+        Log::info($payment);
         if (!$payment) {
             throw new ServiceException(__('payment not exists'));
         }
@@ -109,6 +114,49 @@ class OrderController extends Controller
 
     /**
      * @param Request $request
+     * @param $orderId
+     * @return mixed
+     * @throws SystemException
+     * @throws \App\Exceptions\ServiceException
+     */
+    public function payByMp(Request $request, $orderId)
+    {
+        $order = $this->orderService->findUserNoPaid($orderId);
+
+        $scene = is_h5() ? FrontendConstant::PAYMENT_SCENE_H5 : FrontendConstant::PAYMENT_SCENE_PC;
+        Log::info($scene);
+        $payments = get_payments($scene);
+        Log::info($payments);
+        $payment = $order['payment'] ?: $request->post('payment');
+        Log::info($payment);
+        if (!$payment) {
+            throw new ServiceException(__('payment not exists'));
+        }
+        $paymentMethod = $payments[$payment][$scene] ?? '';
+        if (!$paymentMethod) {
+            throw new SystemException(__('payment method not exists'));
+        }
+
+        // 更新订单的支付方式
+        $updateData = [
+            'payment' => $payment,
+            'payment_method' => $paymentMethod,
+        ];
+        $this->orderService->change2Paying($order['id'], $updateData);
+        $order = array_merge($order, $updateData);
+
+        // 创建远程订单
+        $paymentHandler = app()->make($payments[$payment]['handler']);
+        $createResult = $paymentHandler->createByMp($order);
+        if ($createResult->status == false) {
+            throw new SystemException(__('remote order create failed'));
+        }
+
+        return $this->data([$createResult]);
+    }
+
+    /**
+     * @param Request $request
      *
      * @return \Illuminate\Contracts\View\Factory|\Illuminate\View\View
      */
@@ -128,8 +176,8 @@ class OrderController extends Controller
     public function wechat($orderId)
     {
         $order = $this->orderService->findUser($orderId);
-        $needPaidTotal = $this->businessState->calculateOrderNeedPaidSum($order);
-
+        //$needPaidTotal = $this->businessState->calculateOrderNeedPaidSum($order);
+        $needPaidTotal = 0.01;
         $wechatData = $this->cacheService->pull(sprintf(FrontendConstant::PAYMENT_WECHAT_PAY_CACHE_KEY, $order['order_id']));
         if (!$wechatData) {
             $this->orderService->cancel($order['id']);

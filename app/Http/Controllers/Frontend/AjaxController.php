@@ -11,6 +11,10 @@
 
 namespace App\Http\Controllers\Frontend;
 
+use App\Constant\FrontendConstant;
+use App\Exceptions\ServiceException;
+use App\Exceptions\SystemException;
+use App\Services\Order\Interfaces\OrderServiceInterface;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use App\Businesses\BusinessState;
@@ -29,6 +33,7 @@ use App\Services\Order\Interfaces\PromoCodeServiceInterface;
 use App\Services\Course\Interfaces\VideoCommentServiceInterface;
 use App\Http\Requests\Frontend\CourseOrVideoCommentCreateRequest;
 use App\Services\Course\Interfaces\CourseCommentServiceInterface;
+use Illuminate\Support\Facades\Log;
 
 class AjaxController extends BaseController
 {
@@ -57,6 +62,7 @@ class AjaxController extends BaseController
      */
     protected $promoCodeService;
     protected $businessState;
+    protected $orderService;
 
     public function __construct(
         VideoCommentServiceInterface $videoCommentService,
@@ -65,7 +71,8 @@ class AjaxController extends BaseController
         VideoServiceInterface $videoService,
         CourseServiceInterface $courseService,
         PromoCodeServiceInterface $promoCodeService,
-        BusinessState $businessState
+        BusinessState $businessState,
+        OrderServiceInterface $orderService
     ) {
         $this->videoCommentService = $videoCommentService;
         $this->courseCommentService = $courseCommentService;
@@ -74,6 +81,7 @@ class AjaxController extends BaseController
         $this->courseService = $courseService;
         $this->promoCodeService = $promoCodeService;
         $this->businessState = $businessState;
+        $this->orderService = $orderService;
     }
 
     /**
@@ -152,5 +160,48 @@ class AjaxController extends BaseController
             'id' => $code['id'],
             'discount' => $code['invited_user_reward'],
         ]);
+    }
+
+    /**
+     * @param Request $request
+     * @param $orderId
+     * @return mixed
+     * @throws SystemException
+     * @throws \App\Exceptions\ServiceException
+     */
+    public function payByMp(Request $request, $orderId)
+    {
+        $order = $this->orderService->findUserNoPaid($orderId);
+
+        $scene = is_h5() ? FrontendConstant::PAYMENT_SCENE_H5 : FrontendConstant::PAYMENT_SCENE_PC;
+        Log::info($scene);
+        $payments = get_payments($scene);
+        Log::info($payments);
+        $payment = $order['payment'] ?: $request->post('payment');
+        Log::info($payment);
+        if (!$payment) {
+            throw new ServiceException(__('payment not exists'));
+        }
+        $paymentMethod = $payments[$payment][$scene] ?? '';
+        if (!$paymentMethod) {
+            throw new SystemException(__('payment method not exists'));
+        }
+
+        // 更新订单的支付方式
+        $updateData = [
+            'payment' => $payment,
+            'payment_method' => $paymentMethod,
+        ];
+        $this->orderService->change2Paying($order['id'], $updateData);
+        $order = array_merge($order, $updateData);
+
+        // 创建远程订单
+        $paymentHandler = app()->make($payments[$payment]['handler']);
+        $createResult = $paymentHandler->createByMp($order);
+        if ($createResult->status == false) {
+            throw new SystemException(__('remote order create failed'));
+        }
+
+        return $this->data($createResult->data);
     }
 }

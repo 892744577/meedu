@@ -11,6 +11,7 @@
 
 namespace App\Meedu\Payment\Wechat;
 
+use App\Services\Member\Services\SocialiteService;
 use Exception;
 use Yansongda\Pay\Pay;
 use App\Businesses\BusinessState;
@@ -25,6 +26,7 @@ use App\Services\Order\Services\OrderService;
 use App\Services\Base\Interfaces\CacheServiceInterface;
 use App\Services\Base\Interfaces\ConfigServiceInterface;
 use App\Services\Order\Interfaces\OrderServiceInterface;
+use App\Services\Member\Interfaces\SocialiteServiceInterface;
 
 class Wechat implements Payment
 {
@@ -41,17 +43,23 @@ class Wechat implements Payment
      */
     protected $cacheService;
     protected $businessState;
+    /**
+     * @var SocialiteService
+     */
+    protected $socialiteService;
 
     public function __construct(
         ConfigServiceInterface $configService,
         OrderServiceInterface $orderService,
         CacheServiceInterface $cacheService,
-        BusinessState $businessState
+        BusinessState $businessState,
+        SocialiteServiceInterface $socialiteService
     ) {
         $this->configService = $configService;
         $this->orderService = $orderService;
         $this->cacheService = $cacheService;
         $this->businessState = $businessState;
+        $this->socialiteService = $socialiteService;
     }
 
     public function create(array $order, array $extra = []): PaymentStatus
@@ -79,6 +87,37 @@ class Wechat implements Payment
             $response = redirect(route('order.pay.wechat', [$order['order_id']]));
 
             return new PaymentStatus(true, $response);
+        } catch (Exception $exception) {
+            exception_record($exception);
+
+            return new PaymentStatus(false);
+        }
+    }
+
+    public function createByMp(array $order, array $extra = []): PaymentStatus
+    {
+        //$total = $this->businessState->calculateOrderNeedPaidSum($order);
+        $total = 0.01;
+        $openid = $this->socialiteService->userSocialites($order['user_id']);
+        Log::info($openid);
+        try {
+            $payOrderData = [
+                'out_trade_no' => $order['order_id'],
+                'total_fee' => $total * 100,
+                'body' => $order['order_id'],
+                'openid' => 'oI0Os1ZwxDl1ZmUarUBUgVh6KV5g',
+            ];
+            $payOrderData = array_merge($payOrderData, $extra);
+            $createResult = Pay::wechat($this->configService->getWechatPay())->{$order['payment_method']}($payOrderData);
+            Log::info(__METHOD__, compact('createResult'));
+
+            // 缓存保存
+            $this->cacheService->put(
+                sprintf(FrontendConstant::PAYMENT_WECHAT_PAY_CACHE_KEY, $order['order_id']),
+                $createResult,
+                FrontendConstant::PAYMENT_WECHAT_PAY_CACHE_EXPIRE
+            );
+            return new PaymentStatus(true, $createResult);
         } catch (Exception $exception) {
             exception_record($exception);
 

@@ -93,7 +93,7 @@ Route::group([
     Route::post('/vip/{id}/buy', 'RoleController@buyHandler');
 
     // 收银台
-    Route::get('/order/pay/success', 'OrderController@success')->name('order.pay.success');
+    Route::get('/order/pay/success', 'OrderController@orderSuccess')->name('order.pay.success');
     Route::get('/order/show/{order_id}', 'OrderController@show')->name('order.show');
     Route::any('/order/pay/{order_id}', 'OrderController@pay')->name('order.pay');
     Route::get('/order/pay/wechat/{order_id}', 'OrderController@wechat')->name('order.pay.wechat');
@@ -103,5 +103,6 @@ Route::group([
         Route::post('/course/{id}/comment', 'AjaxController@courseCommentHandler')->name('ajax.course.comment');
         Route::post('/video/{id}/comment', 'AjaxController@videoCommentHandler')->name('ajax.video.comment');
         Route::post('/promoCodeCheck', 'AjaxController@promoCodeCheck')->name('ajax.promo_code.check');
+        Route::any('/order/pay/wechat/h5/{order_id}', 'AjaxController@payByMp')->name('order.pay.wechat.h5');
     });
 });

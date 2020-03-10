@@ -15,20 +15,39 @@
                             <p class="text-right">支付总额 <span class="ml-3">￥{{$needPaidTotal}}</span></p>
                         </div>
                         <div class="col-12 text-right">
-                            <form action="{{route('order.pay', [$order['order_id']])}}" method="post">
+                            <form id="form_pc" action="{{route('order.pay', [$order['order_id']])}}" method="post">
                                 @csrf
                                 <div class="form-group">
                                     @foreach($payments as $index => $payment)
+                                        @if($payment['sign'] == "wechat")
                                         <label class="mr-3"><input type="radio" name="payment"
                                                                    value="{{$payment['sign']}}" {{$index == 0 ? 'checked' : ''}}>
                                             <span class="ml-3">{{$payment['name']}}</span>
                                         </label>
+                                        @endif
+                                    @endforeach
+                                </div>
+                                <div class="form-group" >
+                                    <button type="submit" class="btn btn-primary mt-3">立即支付</button>
+                                </div>
+                            </form>
+                            <div id="form_mobile" >
+                                @csrf
+                                <div class="form-group">
+                                    @foreach($payments as $index => $payment)
+                                        @if($payment['sign'] == "wechat")
+                                            <input type="hidden" name="user_id_mobile" value="{{$user['id']}}">
+                                            <label class="mr-3"><input type="radio" name="payment_mobile"
+                                                                       value="{{$payment['sign']}}" {{$index == 0 ? 'checked' : ''}}>
+                                                <span class="ml-3">{{$payment['name']}}</span>
+                                            </label>
+                                        @endif
                                     @endforeach
                                 </div>
                                 <div class="form-group">
-                                    <button type="submit" class="btn btn-primary mt-3">提交订单</button>
+                                    <button onclick="doPay()" class="btn btn-primary mt-3">立即支付</button>
                                 </div>
-                            </form>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -62,5 +81,42 @@
             </div>
         </div>
     </div>
-
 @endsection
+
+@section('js')
+    <script>
+        if(viewer.match(/MicroMessenger/i) == 'micromessenger'){
+            $("#form_pc").hide();
+            $("#form_mobile").show();
+        }else{
+            $("#form_pc").show();
+            $("#form_mobile").hide();
+        }
+        function onBridgeReady(data){
+            WeixinJSBridge.invoke(
+                'getBrandWCPayRequest', data,
+                function(res){
+                    if(res.err_msg == "get_brand_wcpay_request:ok" ){
+                        // 使用以上方式判断前端返回,微信团队郑重提示：
+                        //res.err_msg将在用户支付成功后返回ok，但并不保证它绝对可靠。
+                    }
+                });
+        }
+
+        //email判断
+       function doPay(){
+            //获取jssdk相关参数
+            var user_id = $("#user_id_mobile").val();
+            var payment = $("input[name='payment_mobile']:checked").val();
+            var url = '{{route('order.pay.wechat.h5', [$order['order_id']])}}';
+            //wx发起支付请求
+            $.post(url,{'_token':'{{csrf_token()}}','payment': payment,'user_id': user_id},function(res) //第二个参数要传token的值 再传参数要用逗号隔开
+            {
+                onBridgeReady(res.data)
+            });
+        }
+
+
+    </script>
+@endsection
+

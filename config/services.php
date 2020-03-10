@@ -62,5 +62,10 @@ return [
         'client_secret' => env('WEIXINWEB_SECRET'),
         'redirect' => env('WEIXINWEB_REDIRECT_URI')
     ],
-
+    'weixinphone' => [
+        'auth_base_uri' => env('AUTH_BASE_URI'),
+        'client_id' => env('WEIXINPHONE_KEY'),
+        'client_secret' => env('WEIXINPHONE_SECRET'),
+        'redirect' => env('WEIXINPHONE_REDIRECT_URI')
+    ],
 ];

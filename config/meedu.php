@@ -84,7 +84,7 @@ return [
 
     // 支付网关
     'payment' => [
-        'alipay' => [
+        /*'alipay' => [
             'handler' => \App\Meedu\Payment\Alipay\Alipay::class,
             'name' => '支付宝',
             'sign' => 'alipay',
@@ -92,18 +92,18 @@ return [
             'pc' => 'web',
             'h5' => 'wap',
             'enabled' => 0,
-        ],
+        ],*/
         'wechat' => [
             'handler' => \App\Meedu\Payment\Wechat\Wechat::class,
             'name' => '微信支付',
             'sign' => 'wechat',
             'default_method' => 'scan',
             'pc' => 'scan',
-            'wechat' => 'mp',
+            'h5' => 'mp',
             'wechat_mini' => 'miniapp',
             'enabled' => 0,
         ],
-        'handPay' => [
+        /*'handPay' => [
             'handler' => \App\Meedu\Payment\HandPay\HandPay::class,
             'name' => '手动打款',
             'sign' => 'handPay',
@@ -112,7 +112,7 @@ return [
             'h5' => 'hand',
             'wechat' => 'hand',
             'enabled' => 0,
-        ],
+        ],*/
     ],
 
     // SEO
