@@ -14,6 +14,7 @@ namespace App\Http\Controllers\Backend\Api\V1;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use App\Events\PaymentSuccessEvent;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends BaseController
 {
@@ -32,8 +33,8 @@ class OrderController extends BaseController
 
     public function finishOrder($id)
     {
-        $order = Order::findOrFail($id);
-        event(new PaymentSuccessEvent($order->toArray()));
+        $order = Order::findOrFail($id)->toArray();
+        event(new PaymentSuccessEvent($order));
         return $this->success();
     }
 }
