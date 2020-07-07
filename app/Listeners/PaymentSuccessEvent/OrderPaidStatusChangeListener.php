@@ -17,7 +17,13 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use App\Services\Order\Services\OrderService;
 use App\Services\Order\Interfaces\OrderServiceInterface;
+use Illuminate\Support\Facades\Log;
 
+/**
+ * Class OrderPaidStatusChangeListener
+ * @package App\Listeners\PaymentSuccessEvent
+ * 该类启用了队列功能ShouldQueue，若服务器没用启用supervisorctl队列处理程序，就会执行时被忽略
+ */
 class OrderPaidStatusChangeListener implements ShouldQueue
 {
     use InteractsWithQueue;
@@ -38,9 +44,10 @@ class OrderPaidStatusChangeListener implements ShouldQueue
      * @param $event PaymentSuccessEvent
      * @throws \App\Exceptions\ServiceException
      */
-    public function handle($event)
+    public function handle(PaymentSuccessEvent $event)
     {
         // 修改订单状态
+        Log::info($event->order);
         $this->orderService->changePaid($event->order['id']);
         // 记录PaidRecords
         $paidTotal = $this->businessState->calculateOrderNeedPaidSum($event->order);

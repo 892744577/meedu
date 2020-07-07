@@ -17,6 +17,11 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use App\Services\Member\Services\NotificationService;
 use App\Services\Member\Interfaces\NotificationServiceInterface;
 
+/**
+ * Class OrderPaidNotificationListener
+ * @package App\Listeners\PaymentSuccessEvent
+ * 该类启用了队列功能ShouldQueue，若服务器没用启用supervisorctl队列处理程序，就会执行时被忽略
+ */
 class OrderPaidNotificationListener implements ShouldQueue
 {
     use InteractsWithQueue;
@@ -34,7 +39,7 @@ class OrderPaidNotificationListener implements ShouldQueue
     /**
      * @param $event PaymentSuccessEvent
      */
-    public function handle($event)
+    public function handle(PaymentSuccessEvent $event)
     {
         $order = $event->order;
         $this->notificationService->notifyOrderPaidMessage($order['user_id'], $order['order_id']);

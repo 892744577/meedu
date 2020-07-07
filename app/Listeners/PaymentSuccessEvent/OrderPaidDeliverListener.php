@@ -19,6 +19,11 @@ use App\Services\Member\Services\DeliverService;
 use App\Services\Order\Interfaces\OrderServiceInterface;
 use App\Services\Member\Interfaces\DeliverServiceInterface;
 
+/**
+ * Class OrderPaidDeliverListener
+ * @package App\Listeners\PaymentSuccessEvent
+ * 该类启用了队列功能ShouldQueue，若服务器没用启用supervisorctl队列处理程序，就会执行时被忽略
+ */
 class OrderPaidDeliverListener implements ShouldQueue
 {
     use InteractsWithQueue;
@@ -43,10 +48,9 @@ class OrderPaidDeliverListener implements ShouldQueue
     /**
      * @param $event PaymentSuccessEvent
      */
-    public function handle($event)
+    public function handle(PaymentSuccessEvent $event)
     {
         $order = $event->order;
-
         // 发货
         $orderProducts = $this->orderService->getOrderProducts($order['id']);
         foreach ($orderProducts as $orderProduct) {
