@@ -19,6 +19,7 @@ use App\Services\Base\Interfaces\ConfigServiceInterface;
 use App\Services\Member\Interfaces\UserServiceInterface;
 use App\Services\Member\Services\UserInviteBalanceService;
 use App\Services\Member\Interfaces\UserInviteBalanceServiceInterface;
+use Illuminate\Support\Facades\Log;
 
 class InviteUserRewardListener
 {
@@ -60,7 +61,7 @@ class InviteUserRewardListener
      */
     public function handle(PaymentSuccessEvent $event)
     {
-        $orderUser = $this->userService->find($event->order['user_id']);
+        /*$orderUser = $this->userService->find($event->order['user_id']);
         if (!$orderUser['invite_user_id']) {
             // 非邀请用户
             return;
@@ -80,6 +81,6 @@ class InviteUserRewardListener
             // 抽成少于一块钱
             return;
         }
-        $this->userInviteBalanceService->createOrderDraw($orderUser['invite_user_id'], $drawTotal, $event->order);
+        $this->userInviteBalanceService->createOrderDraw($orderUser['invite_user_id'], $drawTotal, $event->order);*/
     }
 }
